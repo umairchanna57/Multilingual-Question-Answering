@@ -3,43 +3,12 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import ForeignKey
 from Question import SECTIONS
 import random
-
+from models import *
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///chatbot.db'
 db = SQLAlchemy(app)
 
-# Define Models
-class User(db.Model):
-    user_id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(50), nullable=False)
-    email = db.Column(db.String(100), nullable=False)
-
-class Language(db.Model):
-    language_id = db.Column(db.Integer, primary_key=True)
-    language_code = db.Column(db.String(10), nullable=False)
-    language_name = db.Column(db.String(50), nullable=False)
-
-class Section(db.Model):
-    section_id = db.Column(db.Integer, primary_key=True)
-    section_name = db.Column(db.String(50), nullable=False)
-
-class Question(db.Model):
-    question_id = db.Column(db.Integer, primary_key=True)
-    section_id = db.Column(db.Integer, ForeignKey('section.section_id'))
-    language_id = db.Column(db.Integer, ForeignKey('language.language_id'))
-    question_text = db.Column(db.Text, nullable=False)
-
-class UserAnswer(db.Model):
-    answer_id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, ForeignKey('user.user_id'))
-    question_id = db.Column(db.Integer, ForeignKey('question.question_id'))
-    answer_text = db.Column(db.Text)
-    skipped = db.Column(db.Boolean, default=False)
-    language_id = db.Column(db.Integer, ForeignKey('language.language_id'))
-    timestamp = db.Column(db.TIMESTAMP, default=db.func.current_timestamp())
-
-# Routes
-
+#In this Veiw Getting the Question to User Interface 
 @app.route('/api/questions/<int:section_id>', methods=['GET'])
 def get_one_question(section_id):
     section = SECTIONS.get(section_id)
@@ -65,6 +34,8 @@ def get_one_question(section_id):
 
     return jsonify({"message": f"No more unanswered questions in the {section_name} section"})
 
+
+# Post the answer of Question by user 
 @app.route('/api/answers', methods=['POST'])
 def submit_answer():
     data = request.json
@@ -81,6 +52,8 @@ def submit_answer():
 
     return jsonify({"message": "Answer submitted successfully"})
 
+
+# History to user able to see all answers 
 @app.route('/api/history/<int:user_id>', methods=['GET'])
 def get_answer_history(user_id):
     user_history = UserAnswer.query.filter_by(user_id=user_id).all()
