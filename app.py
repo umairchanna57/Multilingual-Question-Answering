@@ -2,10 +2,10 @@ from flask import Flask, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import ForeignKey
 from Question import SECTIONS
+import random
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///chatbot.db'
-
 db = SQLAlchemy(app)
 
 # Define Models
@@ -23,13 +23,12 @@ class Section(db.Model):
     section_id = db.Column(db.Integer, primary_key=True)
     section_name = db.Column(db.String(50), nullable=False)
 
-
 class Question(db.Model):
     question_id = db.Column(db.Integer, primary_key=True)
     section_id = db.Column(db.Integer, ForeignKey('section.section_id'))
     language_id = db.Column(db.Integer, ForeignKey('language.language_id'))
     question_text = db.Column(db.Text, nullable=False)
-    
+
 class UserAnswer(db.Model):
     answer_id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, ForeignKey('user.user_id'))
@@ -39,11 +38,10 @@ class UserAnswer(db.Model):
     language_id = db.Column(db.Integer, ForeignKey('language.language_id'))
     timestamp = db.Column(db.TIMESTAMP, default=db.func.current_timestamp())
 
-
 # Routes
-# Routes
+# Updated route to get one question at a time for any section
 @app.route('/api/questions/<int:section_id>', methods=['GET'])
-def get_section_questions(section_id):
+def get_one_question(section_id):
     section = SECTIONS.get(section_id)
     if not section:
         return jsonify({"error": "Section not found"}), 404
@@ -52,7 +50,20 @@ def get_section_questions(section_id):
     if not section_name:
         return jsonify({"error": "Section name not found for the section"}), 404
 
-    return jsonify({"section_name": section_name, "questions": section["questions"]})
+    # Check if the user has answered any questions in this section
+    user_id = request.args.get("user_id")
+    if user_id:
+        answered_question_ids = [answer.question_id for answer in UserAnswer.query.filter_by(user_id=user_id).all()]
+    else:
+        answered_question_ids = []
+
+    # Find the first unanswered question in the section
+    for question_id in section["questions"]:
+        if question_id not in answered_question_ids:
+            question_text = section["questions"][question_id]
+            return jsonify({"section_name": section_name, "question_id": question_id, "question_text": question_text})
+
+    return jsonify({"message": f"No more unanswered questions in the {section_name} section"})
 
 @app.route('/api/answers', methods=['POST'])
 def submit_answer():
@@ -64,19 +75,28 @@ def submit_answer():
     if not user_id or not question_id or not answer_text:
         return jsonify({"error": "Missing required parameters"}), 400
 
-    answer = {
-        "user_id": user_id,
-        "question_id": question_id,
-        "answer_text": answer_text
-    }
-    answers.append(answer)
+    user_answer = UserAnswer(user_id=user_id, question_id=question_id, answer_text=answer_text)
+    db.session.add(user_answer)
+    db.session.commit()
 
     return jsonify({"message": "Answer submitted successfully"})
 
 @app.route('/api/history/<int:user_id>', methods=['GET'])
 def get_answer_history(user_id):
-    user_history = [answer for answer in answers if answer["user_id"] == user_id]
-    return jsonify(user_history)
+    user_history = UserAnswer.query.filter_by(user_id=user_id).all()
+    history_data = []
+    
+    for answer in user_history:
+        question_text = Question.query.filter_by(question_id=answer.question_id).first().question_text
+        history_data.append({
+            "question_id": answer.question_id,
+            "question_text": question_text,
+            "answer_text": answer.answer_text,
+            "skipped": answer.skipped,
+            "timestamp": answer.timestamp
+        })
+
+    return jsonify({"user_id": user_id, "history": history_data})
 
 @app.route('/api/v7', methods=['GET'])
 def get_v7_questions():
@@ -97,12 +117,9 @@ def submit_v7_answer():
     if question_id not in allowed_sequence:
         return jsonify({"error": "Invalid question_id for the V7 section"}), 400
 
-    answer = {
-        "user_id": user_id,
-        "question_id": question_id,
-        "answer_text": answer_text
-    }
-    answers.append(answer)
+    user_answer = UserAnswer(user_id=user_id, question_id=question_id, answer_text=answer_text)
+    db.session.add(user_answer)
+    db.session.commit()
 
     return jsonify({"message": "Answer submitted successfully"})
 

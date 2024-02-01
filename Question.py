@@ -38,10 +38,9 @@ SECTIONS = {
         "How Could You Make a much Bigger and Better Contribution to Your Community and the World?",
         "Who do You Love?",
         "Who Loves You the Most?"
-   
-        ],
+    ],
     "Top": [
-       "What is Your Ultimate Purpose?",
+        "What is Your Ultimate Purpose?",
         "What Exactly do You Want to Achieve or Make Happen?",
         "What are You Most Grateful for in Your Life?",
         "What are You Most Excited About in Your Life Now?",
@@ -54,8 +53,7 @@ SECTIONS = {
         "How Could You Make Your Life 10 times More Fun and Exciting?",
         "What Do You Want People to say About You when You are Gone?",
         "How Could You Make a Much Bigger and Better Contribution to Your Community and the World?"
- 
-        ],
+    ],
     "Now": [
         "What Exactly do You Want Now?",
         "What Exactly Do You Want in this Situation?",
@@ -66,15 +64,12 @@ SECTIONS = {
         "What Does Your Intuition is Telling You?",
         "How Could You Easily Accelerate Results and Success?",
         "How Can You Make it Easier, Faster and Better?"
-
-
     ],
     "Overcome": [
-      "What is Great about this Problem or Challenge?",
+        "What is Great about this Problem or Challenge?",
         "What’s Not perfect yet?",
         "How Exactly Would You Like this Situation to be Like?",
         "What Actions are You Committed to take to make it the way you want it?",
         "How Can You Empower and Support others with the Same Challenges as You Have Now?"
-   
-      ],
+    ],
 }
