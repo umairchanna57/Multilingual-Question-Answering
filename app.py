@@ -39,7 +39,7 @@ class UserAnswer(db.Model):
     timestamp = db.Column(db.TIMESTAMP, default=db.func.current_timestamp())
 
 # Routes
-# Updated route to get one question at a time for any section
+
 @app.route('/api/questions/<int:section_id>', methods=['GET'])
 def get_one_question(section_id):
     section = SECTIONS.get(section_id)
@@ -50,7 +50,7 @@ def get_one_question(section_id):
     if not section_name:
         return jsonify({"error": "Section name not found for the section"}), 404
 
-    # Check if the user has answered any questions in this section
+   
     user_id = request.args.get("user_id")
     if user_id:
         answered_question_ids = [answer.question_id for answer in UserAnswer.query.filter_by(user_id=user_id).all()]
