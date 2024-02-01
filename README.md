@@ -10,4 +10,6 @@ There will be 5 Sections as (  V7 ,  Daily , Top ,  Now  ,Overcome ) Each Sectio
 ![WhatsApp Image 2024-01-29 at 01 13 43_0b112a86](https://github.com/umairchanna57/Multilingual-chatbot/assets/99108150/4dfd8a3f-48da-4fd1-9c44-cc9a6a12ea1d)
 
 
-![Uploading WhatsApp Image 2024-01-23 at 04.00.24_f12efc11.jpg…]()
+
+![WhatsApp Image 2024-01-23 at 04 00 24_f12efc11](https://github.com/umairchanna57/Multilingual-chatbot/assets/99108150/11fedb54-6b8a-48c2-a294-f9681d202f64)
+
