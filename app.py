@@ -8,7 +8,25 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///chatbot.db'
 db = SQLAlchemy(app)
 
-#In this Veiw Getting the Question to User Interface 
+
+
+'''
+ API Endpoint for Retrieving Unanswered Questions: This endpoint handles HTTP GET requests to retrieve the first unanswered question from a specific section. It dynamically fetches questions based on section ID and optionally user ID.
+ Parameters:
+ - section_id (integer): Unique identifier of the section to retrieve questions from.
+ - user_id (optional, string): Identifier of the user to check for answered questions. If provided, the endpoint returns the first unanswered question for this user. If not, it returns the first unanswered question in the section.
+ Returns:
+ - JSON Response: Contains details of the retrieved question or a message indicating the absence of unanswered questions in the specified section.
+ Example Request:
+ GET /api/questions/1234?user_id=5678
+ Example Response:
+ {
+   "section_name": "Example Section",
+   "question_id": 9876,
+   "question_text": "What is the capital of France?"
+ }
+'''
+
 @app.route('/api/questions/<int:section_id>', methods=['GET'])
 def get_one_question(section_id):
     section = SECTIONS.get(section_id)
@@ -35,7 +53,24 @@ def get_one_question(section_id):
     return jsonify({"message": f"No more unanswered questions in the {section_name} section"})
 
 
-# Post the answer of Question by user 
+
+
+''' API Endpoint for Submitting Answers: This endpoint handles HTTP POST requests to submit answers to questions.
+ Parameters:
+ - request: The HTTP request object containing the data to be processed.
+ Returns:
+ - JSON Response: An appropriate JSON response based on the success or failure of the data processing.
+ Example:
+ POST /api/answers/
+ {
+   "user_id": "123",
+   "question_id": "456",
+   "answer_text": "Paris"
+ }
+ The above request triggers this post method, processing the data and returning a relevant response.
+'''
+
+
 @app.route('/api/answers', methods=['POST'])
 def submit_answer():
     data = request.json
@@ -53,7 +88,39 @@ def submit_answer():
     return jsonify({"message": "Answer submitted successfully"})
 
 
-# History to user able to see all answers 
+
+
+''' API Endpoint for Retrieving Answer History: This endpoint handles HTTP GET requests to retrieve the answer history of a user.
+ Parameters:
+ - user_id (integer): The unique identifier of the user whose answer history is to be retrieved.
+ Returns:
+ - JSON Response: Contains the answer history of the specified user.
+ Example Request:
+ GET /api/history/123
+ Example Response:
+ {
+   "user_id": 123,
+   "history": [
+     {
+       "question_id": 1,
+       "question_text": "What is the capital of France?",
+       "answer_text": "Paris",
+       "skipped": false,
+       "timestamp": "2024-02-05 10:30:00"
+     },
+     {
+       "question_id": 2,
+       "question_text": "What is the capital of Italy?",
+       "answer_text": "Rome",
+       "skipped": true,
+       "timestamp": "2024-02-05 10:35:00"
+     }
+   ]
+ }
+'''
+
+
+
 @app.route('/api/history/<int:user_id>', methods=['GET'])
 def get_answer_history(user_id):
     user_history = UserAnswer.query.filter_by(user_id=user_id).all()
@@ -71,10 +138,64 @@ def get_answer_history(user_id):
 
     return jsonify({"user_id": user_id, "history": history_data})
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+''' API Endpoint for Retrieving V7 Questions: This endpoint handles HTTP GET requests to retrieve questions from category V7.
+ Parameters: None
+ Returns:
+ - JSON Response: Contains the questions from category V7.
+ Example Request:
+ GET /api/v7
+ Example Response:
+ {
+   "category": "V7",
+   "questions": [
+     {
+       "question_id": 1,
+       "question_text": "What is the meaning of life?"
+     },
+     {
+       "question_id": 2,
+       "question_text": "What is the airspeed velocity of an unladen swallow?"
+     }
+   ]
+ }
+'''
 @app.route('/api/v7', methods=['GET'])
 def get_v7_questions():
     v7_questions = SECTIONS.get("V7", [])
     return jsonify({"category": "V7", "questions": v7_questions})
+
+
+
+
+'''
+ API Endpoint for Submitting V7 Answers: This endpoint handles HTTP POST requests to submit answers to questions in category V7.
+ Parameters:
+ - request: The HTTP request object containing the data to be processed.
+ Returns:
+ - JSON Response: An appropriate JSON response based on the success or failure of the data processing.
+ Example:
+ POST /api/v7/answer/
+ {
+   "user_id": "123",
+   "question_id": "2",
+   "answer_text": "42"
+ }
+ The above request triggers this post method, processing the data and returning a relevant response.
+
+'''
 
 @app.route('/api/v7/answer', methods=['POST'])
 def submit_v7_answer():
@@ -95,6 +216,41 @@ def submit_v7_answer():
     db.session.commit()
 
     return jsonify({"message": "Answer submitted successfully"})
+
+
+
+
+
+
+
+
+
+
+"""
+    API Endpoint for Retrieving All Sections: This endpoint handles HTTP GET requests to retrieve all sections available.
+    
+    Parameters: None
+    
+    Returns:
+    - JSON Response: Contains details of all sections including section ID and section name.
+    
+    Example Request:
+    GET /api/sections
+    
+    Example Response:
+    {
+      "sections": [
+        {
+          "section_id": 1,
+          "section_name": "Science"
+        },
+        {
+          "section_id": 2,
+          "section_name": "History"
+        }
+      ]
+    }
+    """
 
 # New route to get sections
 @app.route('/api/sections', methods=['GET'])
