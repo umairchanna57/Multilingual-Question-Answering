@@ -7,8 +7,8 @@ db = SQLAlchemy()
 # Define Models
 class User(db.Model):
     user_id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(50), nullable=False)
-    email = db.Column(db.String(100), nullable=False)
+    username = db.Column(db.String(50), Unique=True)
+    email = db.Column(db.String(100), Unique=True)
 
 class Language(db.Model):
     language_id = db.Column(db.Integer, primary_key=True)
@@ -33,3 +33,4 @@ class UserAnswer(db.Model):
     skipped = db.Column(db.Boolean, default=False)
     language_id = db.Column(db.Integer, ForeignKey('language.language_id'))
     timestamp = db.Column(db.TIMESTAMP, default=db.func.current_timestamp())
+
