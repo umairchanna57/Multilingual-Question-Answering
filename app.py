@@ -3,6 +3,8 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import ForeignKey
 from Question import SECTIONS
 import random
+from enum import Enum
+from sqlalchemy import Enum as SQLAlchemyEnum
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///chatbot.db'
@@ -10,21 +12,29 @@ db = SQLAlchemy(app)
 
 
 
+class LanguageEnum(Enum):
+    ENGLISH = 'english'
+    FRENCH = 'french'
+    GERMAN = 'german'
+    SPANISH = 'spanish'
+
+
 # Define Models
 class User(db.Model):
     user_id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(50), nullable=False)
-    email = db.Column(db.String(100), nullable=False)
+    username = db.Column(db.String(50), unique=True)
+    email = db.Column(db.String(100), unique=True)
 
 class Language(db.Model):
     language_id = db.Column(db.Integer, primary_key=True)
-    language_code = db.Column(db.String(10), nullable=False)    #___________
-    language_name = db.Column(db.String(50), nullable=False)
+    language_code = db.Column(db.String(10), unique=True)   
+    selected_language = db.Column(SQLAlchemyEnum(LanguageEnum), nullable=False)
 
 class Section(db.Model):
     section_id = db.Column(db.Integer, primary_key=True)
-    section_name = db.Column(db.String(50), nullable=False)   #      changable 
+    section_name = db.Column(db.String(50),  unique=True)   
 
+    
 class Question(db.Model):
     question_id = db.Column(db.Integer, primary_key=True)
     section_id = db.Column(db.Integer, ForeignKey('section.section_id'))
@@ -39,12 +49,6 @@ class UserAnswer(db.Model):
     skipped = db.Column(db.Boolean, default=False)
     language_id = db.Column(db.Integer, ForeignKey('language.language_id'))
     timestamp = db.Column(db.TIMESTAMP, default=db.func.current_timestamp())
-
-
-
-
-
-
 
 
 @app.route('/api/questions/<int:section_id>', methods=['GET'])
