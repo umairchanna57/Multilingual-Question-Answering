@@ -35,7 +35,6 @@ class Section(db.Model):
 class Question(db.Model):
     question_id = db.Column(db.Integer, primary_key=True)
     section_id = db.Column(db.Integer, ForeignKey('section.section_id'))
-    language_id = db.Column(db.Integer, ForeignKey('language.language_id'))
     question_text = db.Column(db.Text, nullable=False)            #Unique together //
 
 class UserAnswer(db.Model):
@@ -48,40 +47,44 @@ class UserAnswer(db.Model):
     timestamp = db.Column(db.TIMESTAMP, default=db.func.current_timestamp())
 
 
+class QuestionLanguage(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    question_id = db.Column(db.Integer, db.ForeignKey('question.question_id'))
+    language_id = db.Column(db.Integer, db.ForeignKey('language.language_id'))
+    question_text = db.Column(db.Text, nullable=False)
+
 
 
 
 @app.route('/api/questions/<int:question_id>', methods=['DELETE'])
 def delete_question(question_id):
-    '''
-    API Endpoint for Deleting a Question:
-    This endpoint handles HTTP DELETE requests to delete a question from all languages. 
-    It first checks if the question exists based on the provided question_id. 
-    If the question is found, it deletes the question from all languages and returns a message indicating the number of questions deleted.
-
+    """
+    API Endpoint for Deleting a Question from All Languages: This endpoint handles HTTP DELETE requests to delete a question from all languages.
+    
     Parameters:
-    - question_id (integer): The unique identifier of the question to be deleted.
-
+    - question_id (integer): The ID of the question to be deleted.
+    
     Returns:
-    - JSON Response: Contains a message indicating the number of questions deleted from all languages.
-
-    Example Request:
-    DELETE /api/questions/1234
-
-    Example Response:
-    {
-      "message": "1 question(s) deleted from all languages"
-    }
-    '''
+    - JSON Response: Indicates whether the question was deleted successfully or if there was an error.
+    """
+    # Check if the question exists
     question = Question.query.get(question_id)
     if not question:
         return jsonify({"error": "Question not found"}), 404
 
     # Delete the question from all languages
-    deleted_question_count = Question.query.filter_by(question_id=question_id).delete()
+    deleted_question_count = QuestionLanguage.query.filter_by(question_id=question_id).delete()
     db.session.commit()
 
     return jsonify({"message": f"{deleted_question_count} question(s) deleted from all languages"}), 200
+
+
+
+
+
+
+
+
 
 
 
@@ -118,9 +121,6 @@ def change_language():
     db.session.commit()
 
     return jsonify({'message': 'Language updated successfully'}), 200
-
-
-
 
 
 
