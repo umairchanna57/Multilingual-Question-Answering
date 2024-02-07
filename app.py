@@ -1,16 +1,16 @@
 from flask import Flask, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import ForeignKey
-from Question import SECTIONS
 import random
 from enum import Enum
+from Question import SECTIONS
 from sqlalchemy import Enum as SQLAlchemyEnum
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///chatbot.db'
 db = SQLAlchemy(app)
 
-
+from enum import Enum
 
 class LanguageEnum(Enum):
     ENGLISH = 'english'
@@ -18,23 +18,20 @@ class LanguageEnum(Enum):
     GERMAN = 'german'
     SPANISH = 'spanish'
 
+class Language(db.Model):
+    language_id = db.Column(db.Integer, primary_key=True)
+    language_name = db.Column(db.Enum(LanguageEnum), nullable=False, default=LanguageEnum.ENGLISH.value)
 
-# Define Models
+
 class User(db.Model):
     user_id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(50), unique=True)
     email = db.Column(db.String(100), unique=True)
 
-class Language(db.Model):
-    language_id = db.Column(db.Integer, primary_key=True)
-    language_code = db.Column(db.String(10), unique=True)   
-    selected_language = db.Column(SQLAlchemyEnum(LanguageEnum), nullable=False)
-
 class Section(db.Model):
     section_id = db.Column(db.Integer, primary_key=True)
     section_name = db.Column(db.String(50),  unique=True)   
 
-    
 class Question(db.Model):
     question_id = db.Column(db.Integer, primary_key=True)
     section_id = db.Column(db.Integer, ForeignKey('section.section_id'))
@@ -49,6 +46,86 @@ class UserAnswer(db.Model):
     skipped = db.Column(db.Boolean, default=False)
     language_id = db.Column(db.Integer, ForeignKey('language.language_id'))
     timestamp = db.Column(db.TIMESTAMP, default=db.func.current_timestamp())
+
+
+
+
+
+@app.route('/api/questions/<int:question_id>', methods=['DELETE'])
+def delete_question(question_id):
+    '''
+    API Endpoint for Deleting a Question:
+    This endpoint handles HTTP DELETE requests to delete a question from all languages. 
+    It first checks if the question exists based on the provided question_id. 
+    If the question is found, it deletes the question from all languages and returns a message indicating the number of questions deleted.
+
+    Parameters:
+    - question_id (integer): The unique identifier of the question to be deleted.
+
+    Returns:
+    - JSON Response: Contains a message indicating the number of questions deleted from all languages.
+
+    Example Request:
+    DELETE /api/questions/1234
+
+    Example Response:
+    {
+      "message": "1 question(s) deleted from all languages"
+    }
+    '''
+    question = Question.query.get(question_id)
+    if not question:
+        return jsonify({"error": "Question not found"}), 404
+
+    # Delete the question from all languages
+    deleted_question_count = Question.query.filter_by(question_id=question_id).delete()
+    db.session.commit()
+
+    return jsonify({"message": f"{deleted_question_count} question(s) deleted from all languages"}), 200
+
+
+
+@app.route('/change-language', methods=['POST'])
+def change_language():
+    """
+    API Endpoint for Changing User's Selected Language: This endpoint handles HTTP POST requests to change the selected language of a user.
+    
+    Parameters:
+    - user_id (integer): The ID of the user whose language needs to be updated.
+    - language_id (integer): The ID of the language to set as the user's selected language.
+    
+    Returns:
+    - JSON Response: Indicates whether the language was updated successfully or if there was an error.
+    """
+    data = request.json
+    if not all(key in data for key in ['user_id', 'language_id']):
+        return jsonify({'error': 'Invalid request'}), 400
+    
+    user_id = data['user_id']
+    language_id = data['language_id']
+
+    # Check if user exists
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    
+    # Check if language ID is valid
+    if not Language.query.filter_by(language_id=language_id).first():
+        return jsonify({'error': 'Invalid language ID'}), 400
+
+    # Update user's selected language
+    user.selected_language = language_id
+    db.session.commit()
+
+    return jsonify({'message': 'Language updated successfully'}), 200
+
+
+
+
+
+
+
+
 
 
 @app.route('/api/questions/<int:section_id>', methods=['GET'])
@@ -92,7 +169,6 @@ def get_one_question(section_id):
 
 
 
-
 @app.route('/api/answers', methods=['POST'])
 def submit_answer():
     data = request.json
@@ -128,11 +204,8 @@ def submit_answer():
 
 
 
-
 @app.route('/api/history/<int:user_id>', methods=['GET'])
 def get_answer_history(user_id):
-    user_history = UserAnswer.query.filter_by(user_id=user_id).all()
-    history_data = []
     ''' API Endpoint for Retrieving Answer History: This endpoint handles HTTP GET requests to retrieve the answer history of a user.
     Parameters:
     - user_id (integer): The unique identifier of the user whose answer history is to be retrieved.
@@ -161,7 +234,8 @@ def get_answer_history(user_id):
     ]
     }
     '''
-    
+    user_history = UserAnswer.query.filter_by(user_id=user_id).all()
+    history_data = []    
     for answer in user_history:
         question_text = Question.query.filter_by(question_id=answer.question_id).first().question_text
         history_data.append({
@@ -218,8 +292,6 @@ def get_v7_questions():
 
 @app.route('/api/v7/answer', methods=['POST'])
 def submit_v7_answer():
-    
-
     '''
     API Endpoint for Submitting V7 Answers: This endpoint handles HTTP POST requests to submit answers to questions in category V7.
     Parameters:
@@ -257,14 +329,6 @@ def submit_v7_answer():
 
 
 
-
-
-
-
-
-
-
-# New route to get sections
 @app.route('/api/sections', methods=['GET'])
 def get_sections():
     
