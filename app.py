@@ -3,8 +3,10 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import ForeignKey
 import random
 from enum import Enum
-from Question import SECTIONS
+from Question import SECTION
 from sqlalchemy import Enum as SQLAlchemyEnum
+from flask import g
+
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///chatbot.db'
@@ -34,9 +36,10 @@ class Section(db.Model):
 
 class Question(db.Model):
     question_id = db.Column(db.Integer, primary_key=True)
-    section_id = db.Column(db.Integer, ForeignKey('section.section_id'))
-    language_id = db.Column(db.Integer, ForeignKey('language.language_id'))
-    question_text = db.Column(db.Text, nullable=False)            #Unique together //
+    section_id = db.Column(db.Integer, db.ForeignKey('section.section_id'))
+    question_text = db.Column(db.Text, nullable=False)
+    is_accessible_to_v7 = db.Column(db.Boolean, default=False)  
+
 
 class UserAnswer(db.Model):
     answer_id = db.Column(db.Integer, primary_key=True)
@@ -48,40 +51,126 @@ class UserAnswer(db.Model):
     timestamp = db.Column(db.TIMESTAMP, default=db.func.current_timestamp())
 
 
+class QuestionLanguage(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    question_id = db.Column(db.Integer, db.ForeignKey('question.question_id'))
+    language_id = db.Column(db.Integer, db.ForeignKey('language.language_id'))
+    question_text = db.Column(db.Text, nullable=False)
+
+
+
+
+
+@app.route('/api/questions/<int:section_id>', methods=['GET'])
+def get_questions(section_id):
+    """
+    API Endpoint for Retrieving Unanswered Questions: 
+    This endpoint handles HTTP GET requests to retrieve the first unanswered question from a specific section. 
+    It dynamically fetches questions based on section ID and optionally user ID.
+
+    Parameters:
+    - section_id (integer): Unique identifier of the section to retrieve questions from.
+    - user_id (optional, string): Identifier of the user to check for answered questions. 
+      If provided, the endpoint returns the first unanswered question for this user. 
+      If not, it returns the first unanswered question in the section.
+
+    Returns:
+    - JSON Response: Contains details of the retrieved question or a message indicating the absence 
+      of unanswered questions in the specified section.
+
+    Example Request:
+    GET /api/questions/1234?user_id=5678
+
+    Example Response:
+    {
+        "section_name": "Example Section",
+        "question_id": 9876,
+        "question_text": "What is the capital of France?"
+    }
+    Note:
+    - For the "V7" section, this endpoint returns the first unanswered question from any section. 
+      "V7" has access to all questions from different sections.
+    """
+
+    # Get the section information from the database
+    section = Section.query.get(section_id)
+    
+    if not section:
+        return jsonify({"error": "Section not found"}), 404
+
+    section_name = section.section_name
+
+    # Get the user ID from the request parameters
+    user_id = request.args.get("user_id")
+
+    # Fetch the answered question IDs for the user
+    if user_id:
+        answered_question_ids = [answer.question_id for answer in UserAnswer.query.filter_by(user_id=user_id).all()]
+    else:
+        answered_question_ids = []
+
+    questions = []
+
+    if section_name == "V7":
+        # "V7" section can access all questions from different sections
+        questions = Question.query.all()
+    else:
+        # Retrieve questions only for the specific section
+        questions = Question.query.filter_by(section_id=section_id).all()
+
+    # Find the first unanswered question in the section
+    for question in questions:
+        if question.question_id not in answered_question_ids:
+            return jsonify({
+                "section_name": section_name,
+                "question_id": question.question_id,
+                "question_text": question.question_text
+            })
+
+    return jsonify({"message": f"No more unanswered questions in the {section_name} section"})
+
+
+
+
+
+
+
+
+
+
+
 
 
 
 @app.route('/api/questions/<int:question_id>', methods=['DELETE'])
 def delete_question(question_id):
-    '''
-    API Endpoint for Deleting a Question:
-    This endpoint handles HTTP DELETE requests to delete a question from all languages. 
-    It first checks if the question exists based on the provided question_id. 
-    If the question is found, it deletes the question from all languages and returns a message indicating the number of questions deleted.
-
+    """
+    API Endpoint for Deleting a Question from All Languages: This endpoint handles HTTP DELETE requests to delete a question from all languages.
+    
     Parameters:
-    - question_id (integer): The unique identifier of the question to be deleted.
-
+    - question_id (integer): The ID of the question to be deleted.
+    
     Returns:
-    - JSON Response: Contains a message indicating the number of questions deleted from all languages.
-
-    Example Request:
-    DELETE /api/questions/1234
-
-    Example Response:
-    {
-      "message": "1 question(s) deleted from all languages"
-    }
-    '''
+    - JSON Response: Indicates whether the question was deleted successfully or if there was an error.
+    """
+    # Check if the question exists
     question = Question.query.get(question_id)
     if not question:
         return jsonify({"error": "Question not found"}), 404
 
     # Delete the question from all languages
-    deleted_question_count = Question.query.filter_by(question_id=question_id).delete()
+    deleted_question_count = QuestionLanguage.query.filter_by(question_id=question_id).delete()
     db.session.commit()
 
     return jsonify({"message": f"{deleted_question_count} question(s) deleted from all languages"}), 200
+
+
+
+
+
+
+
+
 
 
 
@@ -122,50 +211,6 @@ def change_language():
 
 
 
-
-
-
-
-
-
-@app.route('/api/questions/<int:section_id>', methods=['GET'])
-def get_one_question(section_id):
-    section = SECTIONS.get(section_id)
-    if not section:
-        return jsonify({"error": "Section not found"}), 404
-
-    section_name = section.get("section_name")
-    if not section_name:
-        return jsonify({"error": "Section name not found for the section"}), 404
-    '''
-    API Endpoint for Retrieving Unanswered Questions: This endpoint handles HTTP GET requests to retrieve the first unanswered question from a specific section. It dynamically fetches questions based on section ID and optionally user ID.
-    Parameters:
-    - section_id (integer): Unique identifier of the section to retrieve questions from.
-    - user_id (optional, string): Identifier of the user to check for answered questions. If provided, the endpoint returns the first unanswered question for this user. If not, it returns the first unanswered question in the section.
-    Returns:
-    - JSON Response: Contains details of the retrieved question or a message indicating the absence of unanswered questions in the specified section.
-    Example Request:
-    GET /api/questions/1234?user_id=5678
-    Example Response:
-    {
-    "section_name": "Example Section",
-    "question_id": 9876,
-    "question_text": "What is the capital of France?"
-    } '''
-
-    user_id = request.args.get("user_id")
-    if user_id:
-        answered_question_ids = [answer.question_id for answer in UserAnswer.query.filter_by(user_id=user_id).all()]
-    else:
-        answered_question_ids = []
-
-    # Find the first unanswered question in the section
-    for question_id in section["questions"]:
-        if question_id not in answered_question_ids:
-            question_text = section["questions"][question_id]
-            return jsonify({"section_name": section_name, "question_id": question_id, "question_text": question_text})
-
-    return jsonify({"message": f"No more unanswered questions in the {section_name} section"})
 
 
 
