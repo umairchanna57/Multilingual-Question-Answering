@@ -87,6 +87,9 @@ def get_questions(section_id):
         "question_id": 9876,
         "question_text": "What is the capital of France?"
     }
+    Note:
+    - For the "V7" section, this endpoint returns the first unanswered question from any section. 
+      "V7" has access to all questions from different sections.
     """
 
     # Get the section information from the database
