@@ -3,8 +3,10 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import ForeignKey
 import random
 from enum import Enum
-from Question import SECTIONS
+from Question import SECTION
 from sqlalchemy import Enum as SQLAlchemyEnum
+from flask import g
+
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///chatbot.db'
@@ -58,11 +60,6 @@ class QuestionLanguage(db.Model):
 
 
 
-
-
-
-
-from flask import g
 
 @app.route('/api/questions/<int:section_id>', methods=['GET'])
 def get_questions(section_id):
